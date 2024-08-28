@@ -1,0 +1,14 @@
+[package]
+name = "toolbox"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+tracing = ["dep:const_format", "dep:tracing", "dep:tracing-appender", "dep:tracing-subscriber"]
+
+[dependencies]
+const_format = { version = "0.2.32", optional = true }
+tracing = { version = "0.1.40", optional = true }
+tracing-appender = { version = "0.2.3", optional = true }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"], optional = true }
