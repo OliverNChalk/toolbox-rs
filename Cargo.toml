@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 default = []
 tracing = ["dep:const_format", "dep:tracing", "dep:tracing-appender", "dep:tracing-subscriber"]
+version = ["dep:const_format"]
 
 [dependencies]
 const_format = { version = "0.2.32", optional = true }
