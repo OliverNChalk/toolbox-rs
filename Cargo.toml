@@ -1,7 +1,16 @@
 [package]
 name = "toolbox"
 version = "0.1.0"
+authors = ["Oliver Chalk"]
 edition = "2021"
+readme = "README.md"
+
+[lints.clippy]
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+cast_sign_loss = "warn"
+# See `clippy.toml`.
+disallowed_methods = "warn"
 
 [features]
 default = []
