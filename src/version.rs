@@ -93,6 +93,7 @@ Cargo Target:  {CARGO_TARGET_TRIPLE}
 /// - `RUSTC_SEMVER`
 /// - `RUSTC_HOST_TRIPLE`
 /// - `CARGO_TARGET_TRIPLE`
+#[cfg(feature = "tracing")]
 #[macro_export]
 macro_rules! log_build_info {
     () => {{
@@ -110,6 +111,7 @@ macro_rules! log_build_info {
     }};
 }
 
+#[cfg(feature = "tracing")]
 #[doc(hidden)]
 pub fn _log_build_info(
     cargo_pkg_version: &str,
@@ -120,7 +122,7 @@ pub fn _log_build_info(
     rustc_host_triple: &str,
     cargo_target_triple: &str,
 ) {
-    tracing::info!(
+    ::tracing::info!(
         cargo_pkg_version,
         git_sha,
         git_commit_timestamp,
