@@ -14,11 +14,13 @@ disallowed_methods = "warn"
 
 [features]
 default = []
+tokio = ["dep:tokio"]
 tracing = ["dep:const_format", "dep:tracing", "dep:tracing-appender", "dep:tracing-subscriber"]
 version = ["dep:const_format"]
 
 [dependencies]
 const_format = { version = "0.2.32", optional = true }
+tokio = { version = "1.0", features = ["rt"], optional = true }
 tracing = { version = "0.1.40", optional = true }
 tracing-appender = { version = "0.2.3", optional = true }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"], optional = true }
