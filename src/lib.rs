@@ -1,5 +1,5 @@
 pub mod fs;
-#[cfg(feature = "tracing")]
+#[cfg(feature = "tokio")]
 pub mod tokio;
 #[cfg(feature = "tracing")]
 pub mod tracing;
