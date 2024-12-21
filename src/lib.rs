@@ -1,5 +1,5 @@
 pub mod fs;
-#[cfg(feature = "tokio")]
+#[cfg(any(feature = "named_task", feature = "interval_stream"))]
 pub mod tokio;
 #[cfg(feature = "tracing")]
 pub mod tracing;
