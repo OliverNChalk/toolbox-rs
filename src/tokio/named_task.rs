@@ -8,20 +8,24 @@ use tokio::task::JoinError;
 /// This enables a parent task to await all children simultaneously but still
 /// determine what child has exited for logging/diagnosis purposes.
 #[derive(Debug)]
-pub struct NamedTask<Ret = (), Id = String>
+pub struct NamedTask<Ret = (), Name = String>
 where
-    Id: Clone + Unpin,
+    Name: Clone + Unpin,
 {
     task: Pin<Box<tokio::task::JoinHandle<Ret>>>,
-    id: Id,
+    name: Name,
 }
 
-impl<R, I> NamedTask<R, I>
+impl<Ret, Name> NamedTask<Ret, Name>
 where
-    I: Clone + Unpin,
+    Name: Clone + Unpin,
 {
-    pub fn new(task: tokio::task::JoinHandle<R>, id: I) -> Self {
-        NamedTask { task: Box::pin(task), id }
+    pub fn new(task: tokio::task::JoinHandle<Ret>, name: Name) -> Self {
+        NamedTask { task: Box::pin(task), name }
+    }
+
+    pub fn name(&self) -> &Name {
+        &self.name
     }
 }
 
@@ -35,6 +39,6 @@ where
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
-        self.task.as_mut().poll(cx).map(|v| (self.id.clone(), v))
+        self.task.as_mut().poll(cx).map(|v| (self.name.clone(), v))
     }
 }
