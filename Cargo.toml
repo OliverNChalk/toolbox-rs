@@ -14,18 +14,25 @@ disallowed_methods = "warn"
 
 [features]
 default = []
+
+bincode_codec = ["dep:bincode", "dep:serde", "dep:thiserror", "tokio-util/codec"]
 named_task = ["tokio/rt"]
 interval_stream = ["tokio/time", "dep:futures"]
 tracing = ["dep:const_format", "dep:tracing", "dep:tracing-appender", "dep:tracing-subscriber"]
 version = ["dep:const_format"]
 
 [dependencies]
+bincode = { version = "~1.3", optional = true }
 const_format = { version = "0.2.32", optional = true }
 futures = { version = "0.3.31", optional = true }
+serde = { version = "~1.0", optional = true }
+thiserror = { version = "~2.0", optional = true }
 tokio = { version = "1.0", optional = true }
+tokio-util = { version = "~0.7", optional = true }
 tracing = { version = "0.1.40", optional = true }
 tracing-appender = { version = "0.2.3", optional = true }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"], optional = true }
 
 [dev-dependencies]
+serde = { version = "~1.0", features = ["derive"] }
 tokio-test = "0.4.4"
