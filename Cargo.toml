@@ -34,5 +34,7 @@ tracing-appender = { version = "0.2.3", optional = true }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"], optional = true }
 
 [dev-dependencies]
+proptest = "1.6.0"
+proptest-derive = "0.5.1"
 serde = { version = "~1.0", features = ["derive"] }
 tokio-test = "0.4.4"

@@ -6,12 +6,11 @@ use thiserror::Error;
 use tokio_util::bytes::{Buf, BufMut, BytesMut};
 use tokio_util::codec::{Decoder, Encoder};
 
-pub struct BincodeCodec<const BUFFER: usize, T> {
-    buffer: [u8; BUFFER],
+pub struct BincodeCodec<T> {
     _item: PhantomData<T>,
 }
 
-impl<const BUFFER: usize, T> BincodeCodec<BUFFER, T> {
+impl<T> BincodeCodec<T> {
     fn check_bincode_error(err: Box<bincode::ErrorKind>) -> Result<(), BincodeCodecError> {
         match err.as_ref() {
             bincode::ErrorKind::Io(io_err) => match io_err.kind() {
@@ -24,51 +23,37 @@ impl<const BUFFER: usize, T> BincodeCodec<BUFFER, T> {
     }
 }
 
-impl<const BUFFER: usize, T> Default for BincodeCodec<BUFFER, T> {
+impl<T> Default for BincodeCodec<T> {
     fn default() -> Self {
-        BincodeCodec { buffer: [0; BUFFER], _item: PhantomData }
+        BincodeCodec { _item: PhantomData }
     }
 }
 
-impl<const BUFFER: usize, T> Encoder<T> for BincodeCodec<BUFFER, T>
+impl<T> Encoder<T> for BincodeCodec<T>
 where
     T: Serialize,
 {
     type Error = BincodeCodecError;
 
     fn encode(&mut self, item: T, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        // Serialize into intermediate buffer.
-        let mut cursor = std::io::Cursor::new(&mut self.buffer[..]);
-        bincode::serialize_into(&mut cursor, &item)?;
-
-        // Flush to dst.
-        let end = cursor.position() as usize;
-        dst.put(&self.buffer[0..end]);
-
-        Ok(())
+        self.encode(&item, dst)
     }
 }
 
-impl<const BUFFER: usize, T> Encoder<&T> for BincodeCodec<BUFFER, T>
+impl<T> Encoder<&T> for BincodeCodec<T>
 where
     T: Serialize,
 {
     type Error = BincodeCodecError;
 
     fn encode(&mut self, item: &T, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        // Serialize into intermediate buffer.
-        let mut cursor = std::io::Cursor::new(&mut self.buffer[..]);
-        bincode::serialize_into(&mut cursor, item)?;
-
-        // Flush to dst.
-        let end = cursor.position() as usize;
-        dst.put(&self.buffer[0..end]);
+        bincode::serialize_into(dst.writer(), item)?;
 
         Ok(())
     }
 }
 
-impl<const BUFFER: usize, T> Decoder for BincodeCodec<BUFFER, T>
+impl<T> Decoder for BincodeCodec<T>
 where
     T: DeserializeOwned,
 {
@@ -98,11 +83,13 @@ pub enum BincodeCodecError {
 
 #[cfg(test)]
 mod tests {
+    use proptest::{prop_assert_eq, proptest};
+    use proptest_derive::Arbitrary;
     use serde::{Deserialize, Serialize};
 
     use super::*;
 
-    #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Arbitrary)]
     struct TestMessage {
         a: u32,
         b: bool,
@@ -111,7 +98,7 @@ mod tests {
         e: TestEnum,
     }
 
-    #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Arbitrary)]
     enum TestEnum {
         A,
         B,
@@ -120,7 +107,7 @@ mod tests {
 
     #[test]
     fn roundtrip_ok_some() {
-        let mut codec = BincodeCodec::<4096, TestMessage>::default();
+        let mut codec = BincodeCodec::<TestMessage>::default();
         let original =
             TestMessage { a: 0, b: true, c: 2, d: "hello world".to_string(), e: TestEnum::A };
 
@@ -135,7 +122,7 @@ mod tests {
 
     #[test]
     fn roundtrip_ok_none() {
-        let mut codec = BincodeCodec::<4096, TestMessage>::default();
+        let mut codec = BincodeCodec::<TestMessage>::default();
         let original =
             TestMessage { a: 0, b: true, c: 2, d: "hello world".to_string(), e: TestEnum::A };
 
@@ -153,7 +140,7 @@ mod tests {
 
     #[test]
     fn roundtrip_err() {
-        let mut codec = BincodeCodec::<4096, TestMessage>::default();
+        let mut codec = BincodeCodec::<TestMessage>::default();
         let original =
             TestMessage { a: 0, b: true, c: 2, d: "hello world".to_string(), e: TestEnum::A };
 
@@ -168,5 +155,20 @@ mod tests {
 
         // Decode the message.
         assert!(codec.decode(&mut buffer).is_err());
+    }
+
+    #[test]
+    fn roundtrip_fuzz() {
+        proptest!(|(msg: TestMessage)| {
+            let mut codec = BincodeCodec::<TestMessage>::default();
+
+            // Encode the message.
+            let mut buffer = BytesMut::default();
+            codec.encode(&msg, &mut buffer).unwrap();
+
+            // Decode the message.
+            let recovered = codec.decode(&mut buffer).unwrap().unwrap();
+            prop_assert_eq!(recovered, msg);
+        });
     }
 }
