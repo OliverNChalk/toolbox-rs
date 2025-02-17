@@ -7,10 +7,13 @@ This repo contains simple & re-usable rust boilerplate/helpers.
 By default nothing is enabled (to not bloat your dependency tree). Below is a
 list of features:
 
-| Feature   | Description                                     |
-| --------- | ----------------------------------------------- |
-| `tracing` | Tracing setup function with rolling log support |
-| `version` | Standardized clap & tracing version messages    |
+| Feature           | Description                                             |
+|-------------------|---------------------------------------------------------|
+| `bincode_codec`   | Bincode encoding for use with `tokio_util::Framed`      |
+| `named_task`      | Wrap tokio tasks and attach a name                      |
+| `interval_stream` | Periodically create & poll a future to produce a stream |
+| `tracing`         | Tracing setup function with rolling log support         |
+| `version`         | Standardized clap & tracing version messages            |
 
 ### Version
 
