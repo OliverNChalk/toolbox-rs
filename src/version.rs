@@ -42,6 +42,7 @@ macro_rules! __load_build_info {
     () => {
         const CARGO_PKG_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
         const GIT_SHA: Option<&str> = option_env!("VERGEN_GIT_SHA");
+        const GIT_DIRTY: Option<&str> = option_env!("VERGEN_GIT_DIRTY");
         const GIT_COMMIT_TIMESTAMP: Option<&str> = option_env!("VERGEN_GIT_COMMIT_TIMESTAMP");
         const GIT_COMMIT_MESSAGE: Option<&str> = option_env!("VERGEN_GIT_COMMIT_MESSAGE");
         const RUSTC_SEMVER: Option<&str> = option_env!("VERGEN_RUSTC_SEMVER");
@@ -62,9 +63,25 @@ macro_rules! version {
             $crate::__load_build_info!();
 
             $crate::version::__formatcp!(
-                "{} ({} {})",
+                "{} ({}{} {})",
                 $crate::unwrap_or_default!(CARGO_PKG_VERSION),
                 $crate::unwrap_or!(GIT_SHA, $crate::version::DEFAULT_GIT_SHA),
+                match GIT_DIRTY {
+                    Some(val) => {
+                        let val = val.as_bytes();
+                        if val[0] == b'f'
+                            && val[1] == b'a'
+                            && val[2] == b'l'
+                            && val[3] == b's'
+                            && val[4] == b'e'
+                        {
+                            ""
+                        } else {
+                            "-dirty"
+                        }
+                    }
+                    None => "",
+                },
                 $crate::unwrap_or!(
                     GIT_COMMIT_TIMESTAMP,
                     $crate::version::DEFAULT_GIT_COMMIT_TIMESTAMP
@@ -87,11 +104,20 @@ macro_rules! version_dynamic {
             $crate::__load_build_info!();
 
             format!(
-                "{} ({} {})",
+                "{} ({}{} {})",
                 $crate::dynamic_unwrap_or_default!(CARGO_PKG_VERSION),
                 std::env::var("GIT_SHA").ok().unwrap_or_else(|| GIT_SHA
                     .unwrap_or($crate::version::DEFAULT_GIT_SHA)
                     .to_string()),
+                match std::env::var("GIT_DIRTY")
+                    .ok()
+                    .unwrap_or_else(|| GIT_DIRTY.unwrap_or("false").to_string())
+                    .parse()
+                    .unwrap()
+                {
+                    true => "-dirty",
+                    false => "",
+                },
                 std::env::var("GIT_COMMIT_TIMESTAMP")
                     .ok()
                     .unwrap_or_else(|| GIT_COMMIT_TIMESTAMP
@@ -198,6 +224,7 @@ macro_rules! log_build_info {
         $crate::version::_log_build_info(
             CARGO_PKG_VERSION.unwrap_or(""),
             GIT_SHA.unwrap_or($crate::version::DEFAULT_GIT_SHA),
+            GIT_DIRTY.unwrap_or("false"),
             GIT_COMMIT_TIMESTAMP.unwrap_or(""),
             GIT_COMMIT_MESSAGE.unwrap_or(""),
             RUSTC_SEMVER.unwrap_or(""),
@@ -207,11 +234,13 @@ macro_rules! log_build_info {
     }};
 }
 
-#[cfg(feature = "tracing")]
 #[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+#[cfg(feature = "tracing")]
 pub fn _log_build_info(
     cargo_pkg_version: &str,
     git_sha: &str,
+    git_dirty: &str,
     git_commit_timestamp: &str,
     git_commit_message: &str,
     rustc_semver: &str,
@@ -221,6 +250,7 @@ pub fn _log_build_info(
     ::tracing::info!(
         cargo_pkg_version,
         git_sha,
+        git_dirty,
         git_commit_timestamp,
         git_commit_message,
         rustc_semver,
@@ -236,12 +266,12 @@ mod tests {
 
     #[test]
     fn version_const() {
-        expect!["0.2.0 (0000000 0000-00-00T00:00:00.000000000Z)"].assert_eq(&crate::version!());
+        expect!["0.2.1 (0000000 0000-00-00T00:00:00.000000000Z)"].assert_eq(&crate::version!());
     }
 
     #[test]
     fn version_dynamic() {
-        expect!["0.2.0 (0000000 0000-00-00T00:00:00.000000000Z)"]
+        expect!["0.2.1 (0000000 0000-00-00T00:00:00.000000000Z)"]
             .assert_eq(&crate::version_dynamic!());
     }
 
@@ -249,7 +279,7 @@ mod tests {
     fn long_version_const() {
         expect![[r#"
 
-            Version:       0.2.0 (0000000 0000-00-00T00:00:00.000000000Z)
+            Version:       0.2.1 (0000000 0000-00-00T00:00:00.000000000Z)
             Rustc Version: RUSTC_SEMVER MISSING
             Rustc Host:    RUSTC_HOST_TRIPLE MISSING
             Cargo Target:  CARGO_TARGET_TRIPLE MISSING
@@ -262,7 +292,7 @@ mod tests {
     fn long_version_dynamic() {
         expect![[r#"
 
-            Version:       0.2.0 (0000000 0000-00-00T00:00:00.000000000Z)
+            Version:       0.2.1 (0000000 0000-00-00T00:00:00.000000000Z)
             Rustc Version: RUSTC_SEMVER MISSING
             Rustc Host:    RUSTC_HOST_TRIPLE MISSING
             Cargo Target:  CARGO_TARGET_TRIPLE MISSING
