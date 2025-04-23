@@ -29,17 +29,6 @@ impl<T> Default for BincodeCodec<T> {
     }
 }
 
-impl<T> Encoder<T> for BincodeCodec<T>
-where
-    T: Serialize,
-{
-    type Error = BincodeCodecError;
-
-    fn encode(&mut self, item: T, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        self.encode(&item, dst)
-    }
-}
-
 impl<T> Encoder<&T> for BincodeCodec<T>
 where
     T: Serialize,
