@@ -113,7 +113,7 @@ macro_rules! version_dynamic {
                     .ok()
                     .unwrap_or_else(|| GIT_DIRTY.unwrap_or("false").to_string())
                     .parse()
-                    .unwrap()
+                    .unwrap_or(false)
                 {
                     true => "-dirty",
                     false => "",
