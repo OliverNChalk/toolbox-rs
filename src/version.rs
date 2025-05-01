@@ -38,7 +38,7 @@ macro_rules! dynamic_unwrap_or_default {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __load_build_info {
+macro_rules! __load_static {
     () => {
         const CARGO_PKG_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
         const GIT_SHA: Option<&str> = option_env!("VERGEN_GIT_SHA");
@@ -51,6 +51,40 @@ macro_rules! __load_build_info {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __load_dynamic {
+    () => {
+        $crate::__load_static!();
+
+        fn git_sha() -> String {
+            std::env::var("GIT_SHA").ok().unwrap_or_else(|| {
+                GIT_SHA
+                    .unwrap_or($crate::version::DEFAULT_GIT_SHA)
+                    .to_string()
+            })
+        }
+
+        fn git_dirty() -> bool {
+            std::env::var("GIT_DIRTY")
+                .ok()
+                .unwrap_or_else(|| GIT_DIRTY.unwrap_or("false").to_string())
+                .parse()
+                .unwrap_or(false)
+        }
+
+        fn git_commit_timestamp() -> String {
+            std::env::var("GIT_COMMIT_TIMESTAMP")
+                .ok()
+                .unwrap_or_else(|| {
+                    GIT_COMMIT_TIMESTAMP
+                        .unwrap_or($crate::version::DEFAULT_GIT_COMMIT_TIMESTAMP)
+                        .to_string()
+                })
+        }
+    };
+}
+
 /// Version info for the current program.
 ///
 /// # Example
@@ -60,7 +94,7 @@ macro_rules! version {
     () => {{
         #[allow(dead_code)]
         {
-            $crate::__load_build_info!();
+            $crate::__load_static!();
 
             $crate::version::__formatcp!(
                 "{} ({}{} {})",
@@ -101,28 +135,17 @@ macro_rules! version_dynamic {
     () => {{
         #[allow(dead_code)]
         {
-            $crate::__load_build_info!();
+            $crate::__load_dynamic!();
 
             format!(
                 "{} ({}{} {})",
                 $crate::dynamic_unwrap_or_default!(CARGO_PKG_VERSION),
-                std::env::var("GIT_SHA").ok().unwrap_or_else(|| GIT_SHA
-                    .unwrap_or($crate::version::DEFAULT_GIT_SHA)
-                    .to_string()),
-                match std::env::var("GIT_DIRTY")
-                    .ok()
-                    .unwrap_or_else(|| GIT_DIRTY.unwrap_or("false").to_string())
-                    .parse()
-                    .unwrap_or(false)
-                {
+                git_sha(),
+                match git_dirty() {
                     true => "-dirty",
                     false => "",
                 },
-                std::env::var("GIT_COMMIT_TIMESTAMP")
-                    .ok()
-                    .unwrap_or_else(|| GIT_COMMIT_TIMESTAMP
-                        .unwrap_or($crate::version::DEFAULT_GIT_COMMIT_TIMESTAMP)
-                        .to_string()),
+                git_commit_timestamp(),
             )
         }
     }};
@@ -145,7 +168,7 @@ macro_rules! long_version {
     () => {{
         #[allow(dead_code)]
         {
-            $crate::__load_build_info!();
+            $crate::__load_static!();
 
             $crate::version::__formatcp!(
                 r#"
@@ -183,7 +206,7 @@ macro_rules! long_version_dynamic {
     () => {{
         #[allow(dead_code)]
         {
-            $crate::__load_build_info!();
+            $crate::__load_static!();
 
             format!(
                 r#"
@@ -219,13 +242,13 @@ Cargo Target:  {}
 #[macro_export]
 macro_rules! log_build_info {
     () => {{
-        $crate::__load_build_info!();
+        $crate::__load_dynamic!();
 
         $crate::version::_log_build_info(
             CARGO_PKG_VERSION.unwrap_or(""),
-            GIT_SHA.unwrap_or($crate::version::DEFAULT_GIT_SHA),
-            GIT_DIRTY.unwrap_or("false"),
-            GIT_COMMIT_TIMESTAMP.unwrap_or(""),
+            git_sha(),
+            git_dirty(),
+            git_commit_timestamp(),
             GIT_COMMIT_MESSAGE.unwrap_or(""),
             RUSTC_SEMVER.unwrap_or(""),
             RUSTC_HOST_TRIPLE.unwrap_or(""),
@@ -239,9 +262,9 @@ macro_rules! log_build_info {
 #[cfg(feature = "tracing")]
 pub fn _log_build_info(
     cargo_pkg_version: &str,
-    git_sha: &str,
-    git_dirty: &str,
-    git_commit_timestamp: &str,
+    git_sha: String,
+    git_dirty: bool,
+    git_commit_timestamp: String,
     git_commit_message: &str,
     rustc_semver: &str,
     rustc_host_triple: &str,
@@ -266,7 +289,7 @@ mod tests {
 
     #[test]
     fn version_const() {
-        expect!["0.2.1 (0000000 0000-00-00T00:00:00.000000000Z)"].assert_eq(&crate::version!());
+        expect!["0.2.1 (0000000 0000-00-00T00:00:00.000000000Z)"].assert_eq(crate::version!());
     }
 
     #[test]
@@ -285,7 +308,7 @@ mod tests {
             Cargo Target:  CARGO_TARGET_TRIPLE MISSING
 
             GIT_COMMIT_MESSAGE MISSING"#]]
-        .assert_eq(&crate::long_version!());
+        .assert_eq(crate::long_version!());
     }
 
     #[test]
