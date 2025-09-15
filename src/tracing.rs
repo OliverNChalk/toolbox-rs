@@ -47,3 +47,63 @@ pub fn setup_tracing(pkg_name: &str, log_directory: Option<&Path>) -> Option<Wor
 
     file_guard
 }
+
+#[macro_export]
+macro_rules! error_once {
+    () => {{
+        static TRIGGERED: ::std::sync::atomic::AtomicBool =
+            ::std::sync::atomic::AtomicBool::new(false);
+
+        if !TRIGGERED.swap(true, ::std::sync::atomic::Ordering::Relaxed) {
+            ::tracing::error!(file = file!(), line = line!(), "Explicit error");
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_once {
+    ($condition:expr) => {{
+        static TRIGGERED: ::std::sync::atomic::AtomicBool =
+            ::std::sync::atomic::AtomicBool::new(false);
+
+        if !$condition && !TRIGGERED.swap(true, ::std::sync::atomic::Ordering::Relaxed) {
+            ::tracing::error!(file = file!(), line = line!(), "Assertion violated");
+        }
+    }};
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::OnceLock;
+
+    use super::*;
+
+    static TRACING_INIT: OnceLock<()> = OnceLock::new();
+
+    #[test]
+    fn error_once_fires() {
+        TRACING_INIT.get_or_init(|| {
+            let _ = setup_tracing("tests", None);
+        });
+
+        error_once!();
+    }
+
+    #[test]
+    fn assert_once_fires() {
+        TRACING_INIT.get_or_init(|| {
+            let _ = setup_tracing("tests", None);
+        });
+
+        assert_once!(false);
+    }
+
+    #[test]
+    fn assert_once_does_not_fire() {
+        TRACING_INIT.get_or_init(|| {
+            let _ = setup_tracing("tests", None);
+        });
+
+        assert_once!(true);
+    }
+}
