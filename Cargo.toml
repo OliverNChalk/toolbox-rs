@@ -18,6 +18,7 @@ default = []
 bincode_codec = ["dep:bincode", "dep:serde", "dep:thiserror", "tokio-util/codec"]
 named_task = ["tokio/rt"]
 interval_stream = ["tokio/time", "dep:futures"]
+shutdown = ["dep:tokio-util"]
 tracing = ["dep:const_format", "dep:tracing", "dep:tracing-appender", "dep:tracing-subscriber"]
 version = ["dep:const_format"]
 

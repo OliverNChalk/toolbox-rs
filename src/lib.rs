@@ -1,6 +1,8 @@
 #[cfg(feature = "bincode_codec")]
 pub mod bincode_codec;
 pub mod fs;
+#[cfg(feature = "shutdown")]
+pub mod shutdown;
 pub mod soft_assert;
 #[cfg(any(feature = "named_task", feature = "interval_stream"))]
 pub mod tokio;
