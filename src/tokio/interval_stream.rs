@@ -1,5 +1,5 @@
 use std::future::Future;
-use std::pin::pin;
+use std::pin::{pin, Pin};
 use std::task::Poll;
 
 use futures::{ready, Stream};
@@ -17,7 +17,7 @@ use futures::{ready, Stream};
 /// let slot_interval = tokio::time::interval(std::time::Duration::from_millis(1));
 /// let mut slot_stream = IntervalStream::new(
 ///     slot_interval,
-///     Box::new(|| futures::future::ready("hello world").boxed()),
+///     Box::pin(|| futures::future::ready("hello world").boxed()),
 /// );
 ///
 /// assert_eq!(slot_stream.next().await.unwrap(), "hello world");
@@ -29,7 +29,7 @@ where
     Fut: Unpin,
 {
     interval: tokio::time::Interval,
-    poll: Box<dyn Fn() -> Fut>,
+    poll: Pin<Box<dyn Fn() -> Fut + Send>>,
 
     in_progress: Option<Fut>,
 }
@@ -38,7 +38,7 @@ impl<Fut, Output> IntervalStream<Fut>
 where
     Fut: Future<Output = Output> + Unpin,
 {
-    pub fn new(interval: tokio::time::Interval, poll: Box<dyn Fn() -> Fut>) -> Self {
+    pub fn new(interval: tokio::time::Interval, poll: Pin<Box<dyn Fn() -> Fut + Send>>) -> Self {
         IntervalStream { interval, poll, in_progress: None }
     }
 }
